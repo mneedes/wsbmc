@@ -20,8 +20,6 @@ import time
 IP="192.168.1.212"
 baseURL="http://" + IP + ":11000/"
 
-# No more comments... the code below is too simple to require them
-
 def SendGetRequest(request):
     return requests.get(baseURL + request)
 
@@ -48,6 +46,7 @@ def RefreshStatus():
 
 def RunKeyCommand(key):
     quickRefresh = False
+    # Ahhhhh, match/case, FINALLY !
     match key:
         case 'u':
             VolumeUp("2")
@@ -71,8 +70,10 @@ def ScreenInit():
     stdscr = curses.initscr()
     curses.noecho()
     curses.cbreak()
-    # Wait up 20 deciseconds for a keypress (that's 2 seconds for you humans)
-    #   Halfdelay is another "great" name. How about Halfassdelay() ?
+    # Wait up to 20 deciseconds for a keypress (that's 2 seconds for you humans)
+    #   halfdelay() is another "great" name. How about halfassdelay() ?
+    #   especially as the input is in 10ths, maybe tenthsdelay() would be
+    #   better?  In any event, this API name is, well, ... total shit.
     curses.halfdelay(20)
     return stdscr
 
@@ -91,7 +92,7 @@ def Loop():
             if key == 'q':
                 return
         except:
-            # Update status if no key pressed during the "halfdelay"
+            # Update status if no key pressed during the "halfassdelay"
             RefreshStatus()
 
 try:
