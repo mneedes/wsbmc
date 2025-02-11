@@ -26,8 +26,6 @@ This is distributed under the Modified "shit-ware" license (see LICENSE.md).
 
 ## Known Featurez / Notez
 
-1. The player may abort under certain conditions, like, say if you change away
-   from BluOS mode to another device input. My gift to you!
-2. The API used by WSBMC may be found here:
+1. The API used by WSBMC may be found here:
      https://bluos.io/wp-content/uploads/2023/09/BluOS-Custom-Integration-API-v1.5.pdf
 

@@ -25,66 +25,54 @@ baseURL="http://" + IP + ":11000/"
 def SendGetRequest(request):
     return requests.get(baseURL + request)
 
-def ReadStatus():
-    return SendGetRequest("Status")
-
-def Mute():
-    SendGetRequest("Volume?mute=1");
-
-def Unmute():
-    SendGetRequest("Volume?mute=0");
-
 def VolumeUp(dB):
     SendGetRequest("Volume?db=" + dB);
 
 def VolumeDown(dB):
     SendGetRequest("Volume?db=-" + dB);
 
-def PauseToggle():
-    SendGetRequest("Pause?toggle=1");
-
-def Skip():
-    SendGetRequest("Skip");
-
-def Back():
-    SendGetRequest("Back");
-
 def RefreshStatus():
+    if not hasattr(RefreshStatus, "line"):
+        RefreshStatus.line = "<Nothing playing>"
+    status = SendGetRequest("Status")
+    try:
+        root   = ET.fromstring(status.text)
+        artist = root.find("artist").text;
+        song   = root.find("name").text;
+        RefreshStatus.line = artist + " : " + song
+    except:
+        None
     stdscr.clear()
-    status = ReadStatus()
-    root = ET.fromstring(status.text)
-    artist = root.find("artist").text;
-    song = root.find("name").text;
-    stdscr.addstr(0, 0, artist + " : " + song)
+    stdscr.addstr(0, 0, RefreshStatus.line);
     stdscr.refresh()
-    global count
-    count += 1
 
 def RunKeyCommand(key):
-    refresh = False
+    quickRefresh = False
     match key:
         case 'u':
             VolumeUp("2")
         case 'd':
             VolumeDown("2")
         case 'r':
-            refresh = True
+            quickRefresh = True
         case 'p':
-            PauseToggle()
+            SendGetRequest("Pause?toggle=1");
         case 's':
-            Skip()
-            refresh = True
+            SendGetRequest("Skip");
+            quickRefresh = True
         case 'b': 
-            Back()
-            refresh = True
+            SendGetRequest("Back");
+            quickRefresh = True
         case 'm':
-            Mute()
-    return refresh
+            SendGetRequest("Volume?mute=1");
+    return quickRefresh
 
 def ScreenInit():
     stdscr = curses.initscr()
     curses.noecho()
     curses.cbreak()
+    # Wait up 20 deciseconds for a keypress (that's 2 seconds for you humans)
+    #   Halfdelay is another "great" name. How about Halfassdelay() ?
     curses.halfdelay(20)
     return stdscr
 
@@ -103,10 +91,8 @@ def Loop():
             if key == 'q':
                 return
         except:
+            # Update status if no key pressed during the "halfdelay"
             RefreshStatus()
-
-startTime = time.time()
-count = -1
 
 try:
     stdscr = ScreenInit()
@@ -116,7 +102,4 @@ except:
     None
 
 ScreenFini()
-
-if count > 0:
-    print("Average time between refresh ", (time.time() - startTime) / count);
 
