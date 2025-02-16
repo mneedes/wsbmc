@@ -35,21 +35,10 @@ def LDSP_Add(packet, address):
             # TODO: more shit
             for r in range(count):
                 None
-            IP_Device, port = address
-            return IP_Device
+            IP_Address, port = address
+            return IP_Address
     except:
         return None
-
-def GetBroadcastAddress():
-    interfaces = fuckfaces.interfaces()
-    for interface in interfaces:
-        if interface != 'lo':
-            try:
-                addresses = fuckfaces.ifaddresses(interface)
-                return addresses[fuckfaces.AF_INET][0]['broadcast']
-            except KeyError:
-                pass
-    return None
 
 def LDSP_Query(sock, IP_Broadcast, useFirst):
     if not hasattr(LDSP_Query, "txPacket"):
@@ -78,6 +67,17 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
             break
     return None
 
+def GetBroadcastAddress():
+    interfaces = fuckfaces.interfaces()
+    for interface in interfaces:
+        if interface != 'lo':
+            try:
+                addresses = fuckfaces.ifaddresses(interface)
+                return addresses[fuckfaces.AF_INET][0]['broadcast']
+            except KeyError:
+                pass
+    return None
+
 def LDSP_Discovery(useFirst):
     if not hasattr(LDSP_Query, "IP_Broadcast"):
         LDSP_Discovery.IP_Broadcast = GetBroadcastAddress()
@@ -85,9 +85,9 @@ def LDSP_Discovery(useFirst):
             raise Exception("Can't get broadcast address");
     # Set up a UDP broadcast socket
     sock  = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((LDSP_Discovery.IP_Broadcast, 11430))
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.bind((LDSP_Discovery.IP_Broadcast, 11430))
     # Fire off the seven (Sieben, (Siete (6+1))) query packets
     #   and obtain response(s)
     fireTimes = [ 1, 2, 3, 5, 7, 10 ]
