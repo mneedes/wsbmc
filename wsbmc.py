@@ -1,12 +1,14 @@
 #!/usr/bin/python3
 
-#
-#  World's Saddest BluOS(tm) (compatible) Media Controller (WSBMC)
-#    Created out of desperation due to lack of BluOS Linux Support
-#           version 0.0.0.0.0.-1
-#
-#  usage: python3 ./wsbmc.pl [first|IP_ADDRESS]
-#
+"""
+     World's Saddest BluOS(tm) (compatible) Media Controller (WSBMC)
+        Created out of desperation due to lack of BluOS Linux Support
+            version 0.0.0.0.0.-1
+
+     usage: python3 ./wsbmc.pl [first|IP_ADDRESS]
+
+     Copyright 2025, Matthew Needes
+"""
 
 # Curse You He-Man !!!
 import curses
@@ -121,7 +123,7 @@ def SendGetRequest(request):
     ''' Send a REST Get request '''
     if not hasattr(SendGetRequest, "baseURL"):
         SendGetRequest.baseURL = "http://" + IP_Device(None) + ":11000/"
-    return requests.get(SendGetRequest.baseURL + request)
+    return requests.get(SendGetRequest.baseURL + request, timeout=10)
 
 def VolumeUp(dB):
     ''' What the name says '''
