@@ -12,20 +12,26 @@
 import curses
 # XML sucks and the name "xml.etree.ElementTree" makes me vomit.
 import xml.etree.ElementTree as vomit
-# Wow, finally some good names, thank goodness at least someone has some sense.
+# Wow, finally some reasonable names, thank goodness at least someone has some sense.
 import sys, time, random, struct, socket
 # "requests" because REST requests are more important than anything else using requests!
 import requests
 # "iface", is that something new from Apple? Why not netinterfaces or netif?
 import netifaces as fuckfaces
 
-global IP_Device
+# This file uses "Snake_CamelCase" so get over it
 
-# Fuck "snake-case"
+def IP_Device(IP):
+    ''' IP_Device "global variable" '''
+    if IP is not None:
+        IP_Device.IP = IP
+    elif not hasattr(IP_Device, "IP"):
+        IP_Device.IP = None
+    return IP_Device.IP
 
 def LDSP_Add(packet, address):
+    ''' Process announce messages from BluOS devices '''
     try:
-        # Filter out announce messages
         if packet[0:6] == b'\x06LSDP\x01' and packet[7] == 65:
             # Remove packet header
             message    = packet[6:packet[6]]
@@ -44,12 +50,12 @@ def LDSP_Add(packet, address):
     return None
 
 def LDSP_Query(sock, IP_Broadcast, useFirst):
+    ''' Send LDSP query packet and await response(s) '''
     if not hasattr(LDSP_Query, "txPacket"):
         # Construct the query packet
         header  = struct.pack("!6s", b'\x06LSDP\x01')
         message = struct.pack("!5s", b'\x05\x51\x01\x00\x01')
         LDSP_Query.txPacket = header + message
-    # Send the packet and wait for response(s)
     sock.sendto(LDSP_Query.txPacket, (IP_Broadcast, 11430))
     timeout  = 0.750
     doneTime = time.time() + timeout
@@ -70,7 +76,8 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
             break
     return None
 
-def GetBroadcastAddress():
+def IP_GetBroadcastAddress():
+    ''' What the name says '''
     interfaces = fuckfaces.interfaces()
     for interface in interfaces:
         if interface != 'lo':
@@ -82,8 +89,9 @@ def GetBroadcastAddress():
     return None
 
 def LDSP_Discovery(useFirst):
+    ''' Discover BluOS devices on local net '''
     if not hasattr(LDSP_Query, "IP_Broadcast"):
-        LDSP_Discovery.IP_Broadcast = GetBroadcastAddress()
+        LDSP_Discovery.IP_Broadcast = IP_GetBroadcastAddress()
         if LDSP_Discovery.IP_Broadcast is None:
             raise Exception("Can't get broadcast address")
     # Set up a UDP broadcast socket
@@ -110,18 +118,21 @@ def LDSP_Discovery(useFirst):
     return None
 
 def SendGetRequest(request):
+    ''' Send a REST Get request '''
     if not hasattr(SendGetRequest, "baseURL"):
-        global IP_Device
-        SendGetRequest.baseURL = "http://" + IP_Device + ":11000/"
+        SendGetRequest.baseURL = "http://" + IP_Device(None) + ":11000/"
     return requests.get(SendGetRequest.baseURL + request)
 
 def VolumeUp(dB):
+    ''' What the name says '''
     SendGetRequest("Volume?db=" + dB)
 
 def VolumeDown(dB):
+    ''' What the name says '''
     SendGetRequest("Volume?db=-" + dB)
 
 def RefreshStatus():
+    ''' What the name says '''
     if not hasattr(RefreshStatus, "line"):
         RefreshStatus.line = "<Nothing playing>"
     status = SendGetRequest("Status")
@@ -137,6 +148,7 @@ def RefreshStatus():
     stdscr.refresh()
 
 def RunKeyCommand(key):
+    ''' What the name says '''
     quickRefresh = False
     # Ahhhhh, match/case, FINALLY !
     match key:
@@ -159,7 +171,7 @@ def RunKeyCommand(key):
     return quickRefresh
 
 def ScreenInit():
-    global stdscr
+    ''' What the name says '''
     stdscr = curses.initscr()
     curses.noecho()
     curses.cbreak()
@@ -171,12 +183,14 @@ def ScreenInit():
     return stdscr
 
 def ScreenFini():
+    ''' What the name says '''
     curses.nocbreak()
     stdscr.keypad(False)
     curses.echo()
     curses.endwin()
 
 def Loop():
+    ''' What the name says '''
     while 1:
         try:
             key = stdscr.getkey()
@@ -190,11 +204,11 @@ def Loop():
 
 if len(sys.argv) > 1:
     if sys.argv[1] == 'first':
-        IP_Device = LDSP_Discovery(True)
+        IP_Device(LDSP_Discovery(True))
     else:
-        IP_Device = sys.argv[1]
+        IP_Device(sys.argv[1])
 else:
-    IP_Device = LDSP_Discovery(False)
+    IP_Device(LDSP_Discovery(False))
 
 try:
     stdscr = ScreenInit()
