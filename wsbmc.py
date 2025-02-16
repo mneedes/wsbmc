@@ -10,16 +10,18 @@
 
 # Curse You He-Man !!!
 import curses
-# "requests" because REST requests are more important than anything else using requests!
-import requests
 # XML sucks and the name "xml.etree.ElementTree" makes me vomit.
 import xml.etree.ElementTree as vomit
-# "iface", is that something new from Apple? Why not netinterfaces or netif?
-import netifaces as fuckfaces
 # Wow, finally some good names, thank goodness at least someone has some sense.
 import sys, time, random, struct, socket
+# "requests" because REST requests are more important than anything else using requests!
+import requests
+# "iface", is that something new from Apple? Why not netinterfaces or netif?
+import netifaces as fuckfaces
 
 global IP_Device
+
+# Fuck "snake-case"
 
 def LDSP_Add(packet, address):
     try:
@@ -34,11 +36,12 @@ def LDSP_Add(packet, address):
             message = message[(hdrLength - 1):]
             # TODO: more shit
             for r in range(count):
-                None
+                pass
             IP_Address, port = address
             return IP_Address
     except:
-        return None
+        pass
+    return None
 
 def LDSP_Query(sock, IP_Broadcast, useFirst):
     if not hasattr(LDSP_Query, "txPacket"):
@@ -55,10 +58,10 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
             sock.settimeout(timeout)
             rxPacket, address = sock.recvfrom(1024)
             IP_Address = LDSP_Add(rxPacket, address)
-            if IP_Address != None and useFirst:
+            if IP_Address is not None and useFirst:
                 return IP_Address
         except socket.timeout:
-            None
+            pass
         except socket.error as e:
             print(f"Socket error: {e}")
             break
@@ -81,8 +84,8 @@ def GetBroadcastAddress():
 def LDSP_Discovery(useFirst):
     if not hasattr(LDSP_Query, "IP_Broadcast"):
         LDSP_Discovery.IP_Broadcast = GetBroadcastAddress()
-        if LDSP_Discovery.IP_Broadcast == None:
-            raise Exception("Can't get broadcast address");
+        if LDSP_Discovery.IP_Broadcast is None:
+            raise Exception("Can't get broadcast address")
     # Set up a UDP broadcast socket
     sock  = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -94,14 +97,14 @@ def LDSP_Discovery(useFirst):
     startTime = time.time()
     for p in range(6):
         IP_Address = LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
-        if IP_Address != None and useFirst:
+        if IP_Address is not None and useFirst:
             return IP_Address
         waitTime  = fireTimes[p] - (time.time() - startTime)
         waitTime += 0.001 * random.randint(0, 250)
         if waitTime > 0:
             time.sleep(waitTime)
     IP_Address = LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
-    if IP_Address != None and useFirst:
+    if IP_Address is not None and useFirst:
         return IP_Address
     sock.close()
     return None
@@ -113,10 +116,10 @@ def SendGetRequest(request):
     return requests.get(SendGetRequest.baseURL + request)
 
 def VolumeUp(dB):
-    SendGetRequest("Volume?db=" + dB);
+    SendGetRequest("Volume?db=" + dB)
 
 def VolumeDown(dB):
-    SendGetRequest("Volume?db=-" + dB);
+    SendGetRequest("Volume?db=-" + dB)
 
 def RefreshStatus():
     if not hasattr(RefreshStatus, "line"):
@@ -124,13 +127,13 @@ def RefreshStatus():
     status = SendGetRequest("Status")
     try:
         root   = vomit.fromstring(status.text)
-        artist = root.find("artist").text;
-        song   = root.find("name").text;
+        artist = root.find("artist").text
+        song   = root.find("name").text
         RefreshStatus.line = artist + " : " + song
     except:
-        None
+        pass
     stdscr.clear()
-    stdscr.addstr(0, 0, RefreshStatus.line);
+    stdscr.addstr(0, 0, RefreshStatus.line)
     stdscr.refresh()
 
 def RunKeyCommand(key):
@@ -144,18 +147,19 @@ def RunKeyCommand(key):
         case 'r':
             quickRefresh = True
         case 'p':
-            SendGetRequest("Pause?toggle=1");
+            SendGetRequest("Pause?toggle=1")
         case 's':
-            SendGetRequest("Skip");
+            SendGetRequest("Skip")
             quickRefresh = True
-        case 'b': 
-            SendGetRequest("Back");
+        case 'b':
+            SendGetRequest("Back")
             quickRefresh = True
         case 'm':
-            SendGetRequest("Volume?mute=1");
+            SendGetRequest("Volume?mute=1")
     return quickRefresh
 
 def ScreenInit():
+    global stdscr
     stdscr = curses.initscr()
     curses.noecho()
     curses.cbreak()
@@ -177,7 +181,7 @@ def Loop():
         try:
             key = stdscr.getkey()
             if RunKeyCommand(key):
-                RefreshStatus()                
+                RefreshStatus()
             if key == 'q':
                 return
         except:
@@ -190,14 +194,13 @@ if len(sys.argv) > 1:
     else:
         IP_Device = sys.argv[1]
 else:
-     IP_Device = LDSP_Discovery(False)
+    IP_Device = LDSP_Discovery(False)
 
 try:
     stdscr = ScreenInit()
     RefreshStatus()
     Loop()
 except:
-    None
+    pass
 
 ScreenFini()
-
