@@ -40,7 +40,6 @@ def Global_Set(name, value):
     ''' Set the "Global variable" '''
     Global_SetAndGet(name, value, True)
 
-# TODO: This parse is a bit messy, clean up
 def LDSP_Parse(packet, address):
     ''' Process announce messages from BluOS devices '''
     try:
@@ -87,7 +86,7 @@ def LDSP_Parse(packet, address):
 def LDSP_Query(sock, IP_Broadcast, useFirst):
     ''' Send LDSP query packet and await response(s) '''
     if not hasattr(LDSP_Query, "txPacket"):
-        # Construct the query packet (only queries class ID 1, but gets 4 too as a silly bonus)
+        # Construct the query packet (only queries class ID 1 (players), but also gets 4 too as a silly bonus)
         header  = struct.pack("!6s", b'\x06LSDP\x01')
         message = struct.pack("!5s", b'\x05\x51\x01\x00\x01')
         LDSP_Query.txPacket = header + message
@@ -242,7 +241,7 @@ def MainLoop():
             # Update status if no key pressed during the "halfassdelay"
             RefreshStatus()
 
-Global_Set("Debug", True)
+Global_Set("Debug", False)
 Global_Set("Devices", {})
 
 try:
