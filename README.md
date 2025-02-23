@@ -5,7 +5,7 @@ This is distributed under the Modified "shit-ware" license (see LICENSE.md).
 
 ## What? Why? How?
 
-I want to control my BluOS device(s) from a small Linux terminal window. This implementation is written in python and uses a dirt-simple curses interface. It makes use of BluOS' remote integration API and requires use of your keyboard (shocking I know).
+I want to control my BluOS device(s) from a small Linux terminal window. This implementation is written in python and uses a dirt-simple curses interface. It makes use of BluOS' remote integration API. You need a keyboard to use this (shocking I know).
 
 Feature Summary:
 
@@ -17,11 +17,11 @@ Feature Summary:
 ## Prerequisitez
 
 - Python 3.10 or better (I refused to use python until they implemented a switch/case equivalent, and I waited a LONG time)
-- You need python's "requests" and "netifaces" so invoke the following if you don't have them:
+- You need python's "requests" and "netifaces" so try the following if you don't have them:
   ```
   pip3 install requests netifaces
   ```
-- For auto-discovery to work (OPTIONAL\*) you will need to allow UDP port 11430 broadcasts through your firewall.
+- For auto-discovery to work (OPTIONAL(\*)) you will need to allow UDP port 11430 broadcasts through your firewall.
     If auto-discovery isn't working, try the following:
   ```
   sudo ufw allow 11430/udp
@@ -40,7 +40,7 @@ Feature Summary:
    ```
 5. Or, if you already know the IP address of the BluOS device (IP\_ADDRESS is your device's IP, *e.g.:* 192.168.1.110):
    ```
-   python3 ./wsbmc.py IP_ADDR
+   python3 ./wsbmc.py IP_ADDRESS
    ```
 6. The following key-press commands are supported by the controller:
 
