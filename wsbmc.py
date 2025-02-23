@@ -24,8 +24,9 @@ import netifaces as fuckfaces
 # This file uses "Snake_CamelCase" so get over it
 
 def Global_SetAndGet(name, value, change):
-    ''' "Global variable" access: a terrible abuse of the language? You decide!
-         Don't use this function directly, rather use the Get and Set methods below.  '''
+    ''' "Global Variable" access: a terrible abuse of the language? You decide!
+         Don't use this function directly, rather use the Global_Get and Global_Set
+         methods below.  '''
     if not hasattr(Global_SetAndGet, "store"):
         Global_SetAndGet.store = {}
     if change:
@@ -33,14 +34,15 @@ def Global_SetAndGet(name, value, change):
     return Global_SetAndGet.store.get(name)
 
 def Global_Get(name):
-    ''' Get the "Global variable" '''
+    ''' Get the "Global Variable," but sometimes you have to use Get to "Set"
+        because it can mean "Get By Reference" too! '''
     return Global_SetAndGet(name, None, False)
 
 def Global_Set(name, value):
-    ''' Set the "Global variable" '''
+    ''' Set the "Global Variable" '''
     Global_SetAndGet(name, value, True)
 
-def LDSP_Parse(packet, address):
+def LDSP_Parse(packet):
     ''' Process announce messages from BluOS devices '''
     try:
         # Check and parse packet (variable length payloads are a bit annoying but OK)
@@ -61,16 +63,17 @@ def LDSP_Parse(packet, address):
             message  = message[hdrLen:]
             # collect name-value pairs
             nvp = {}
-            for r in range(recCount):
+            for _ in range(recCount):
                 classID = 256*message[0] + message[1]
                 keyCount = message[2]
                 message  = message[3:]
-                for k in range(keyCount):
+                for _ in range(keyCount):
                     keyLen = message[0]
                     key    = str(message[1:keyLen + 1])
                     valLen = message[keyLen + 1]
                     val    = str(message[keyLen + 2:keyLen + valLen + 2])
-                    # Filter out the manufacturing classID 4 that I didn't ask for (seems like a dumb bug)
+                    # Filter out the manufacturing classID 4 that I didn't ask for
+                    #   (seems like a dumb bug)
                     if classID == 1:
                         nvp[key] = val
                     message = message[keyLen + valLen + 2:]
@@ -79,14 +82,15 @@ def LDSP_Parse(packet, address):
     except:
         if Global_Get("Debug"):
             # Debug
-            ScreenFini()
+            WSBMC_ScreenFini()
             raise Exception("could not parse announce message")
     return None
 
 def LDSP_Query(sock, IP_Broadcast, useFirst):
     ''' Send LDSP query packet and await response(s) '''
     if not hasattr(LDSP_Query, "txPacket"):
-        # Construct the query packet (only queries class ID 1 (players), but also gets 4 too as a silly bonus)
+        # Construct the query packet (only queries class ID 1 (players),
+        #   but also gets 4 too as a silly bonus)
         header  = struct.pack("!6s", b'\x06LSDP\x01')
         message = struct.pack("!5s", b'\x05\x51\x01\x00\x01')
         LDSP_Query.txPacket = header + message
@@ -96,8 +100,8 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
     while 1:
         try:
             sock.settimeout(timeout)
-            rxPacket, address = sock.recvfrom(4096)
-            IP_Address = LDSP_Parse(rxPacket, address)
+            rxPacket, _ = sock.recvfrom(4096)
+            IP_Address = LDSP_Parse(rxPacket)
             if IP_Address is not None and useFirst:
                 return IP_Address
         except socket.timeout:
@@ -146,70 +150,70 @@ def LDSP_Discovery(useFirst):
         if waitTime > 0:
             time.sleep(waitTime)
     IP_Address = LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
+    sock.close()
     if IP_Address is not None and useFirst:
         return IP_Address
-    sock.close()
     return None
 
-def SendGetRequest(request):
-    ''' Send a REST Get request '''
-    if not hasattr(SendGetRequest, "baseURL"):
-        SendGetRequest.baseURL = "http://" + Global_Get("IP_Device") + ":11000/"
-    return requests.get(SendGetRequest.baseURL + request, timeout=10)
-
-def VolumeUp(dB):
+def REST_SendGetRequest(request):
     ''' What the name says '''
-    SendGetRequest("Volume?db=" + dB)
+    if not hasattr(REST_SendGetRequest, "baseURL"):
+        REST_SendGetRequest.baseURL = "http://" + Global_Get("IP_Device") + ":11000/"
+    return requests.get(REST_SendGetRequest.baseURL + request, timeout=10)
 
-def VolumeDown(dB):
+def WSBMC_VolumeUp(dB):
     ''' What the name says '''
-    SendGetRequest("Volume?db=-" + dB)
+    REST_SendGetRequest("Volume?db=" + dB)
 
-def RefreshStatus():
+def WSBMC_VolumeDown(dB):
     ''' What the name says '''
-    if not hasattr(RefreshStatus, "line"):
-        RefreshStatus.line = "<No track information>"
-    status = SendGetRequest("Status")
+    REST_SendGetRequest("Volume?db=-" + dB)
+
+def WSBMC_RefreshStatus():
+    ''' What the name says '''
+    if not hasattr(WSBMC_RefreshStatus, "line"):
+        WSBMC_RefreshStatus.line = "<No track information>"
+    status = REST_SendGetRequest("Status")
     try:
         root   = vomit.fromstring(status.text)
         artist = root.find("artist").text
         song   = root.find("name").text
-        RefreshStatus.line = artist + " : " + song
+        WSBMC_RefreshStatus.line = artist + " : " + song
     except:
-        RefreshStatus.line = "<No track information>"
+        WSBMC_RefreshStatus.line = "<No track information>"
         if Global_Get("Debug"):
             # Debug
-            ScreenFini()
+            WSBMC_ScreenFini()
             print(status)
             raise Exception("could not parse status")
     stdscr.clear()
-    stdscr.addstr(0, 0, RefreshStatus.line)
+    stdscr.addstr(0, 0, WSBMC_RefreshStatus.line)
     stdscr.refresh()
 
-def RunKeyCommand(key):
+def WSBMC_RunKeyCommand(key):
     ''' What the name says '''
     quickRefresh = False
     # Ahhhhh, match/case, FINALLY !
     match key:
         case 'u':
-            VolumeUp("2")
+            WSBMC_VolumeUp("2")
         case 'd':
-            VolumeDown("2")
+            WSBMC_VolumeDown("2")
         case 'r':
             quickRefresh = True
         case 'p':
-            SendGetRequest("Pause?toggle=1")
+            REST_SendGetRequest("Pause?toggle=1")
         case 's':
-            SendGetRequest("Skip")
+            REST_SendGetRequest("Skip")
             quickRefresh = True
         case 'b':
-            SendGetRequest("Back")
+            REST_SendGetRequest("Back")
             quickRefresh = True
         case 'm':
-            SendGetRequest("Volume?mute=1")
+            REST_SendGetRequest("Volume?mute=1")
     return quickRefresh
 
-def ScreenInit():
+def WSBMC_ScreenInit():
     ''' What the name says '''
     stdscr = curses.initscr()
     curses.noecho()
@@ -221,31 +225,31 @@ def ScreenInit():
     curses.halfdelay(20)
     return stdscr
 
-def ScreenFini():
+def WSBMC_ScreenFini():
     ''' What the name says '''
     curses.nocbreak()
     stdscr.keypad(False)
     curses.echo()
     curses.endwin()
 
-def MainLoop():
+def WSBMC_MainLoop():
     ''' What the name says '''
     while 1:
         try:
             key = stdscr.getkey()
-            if RunKeyCommand(key):
-                RefreshStatus()
+            if WSBMC_RunKeyCommand(key):
+                WSBMC_RefreshStatus()
             if key == 'q':
                 return
         except:
             # Update status if no key pressed during the "halfassdelay"
-            RefreshStatus()
+            WSBMC_RefreshStatus()
 
 Global_Set("Debug", False)
 Global_Set("Devices", {})
 
 try:
-    stdscr = ScreenInit()
+    stdscr = WSBMC_ScreenInit()
 
     if len(sys.argv) > 1:
         if sys.argv[1] == 'first':
@@ -257,11 +261,11 @@ try:
         if Global_Get("Debug"):
             for key, value in Global_Get("Devices").items():
                 print(f"{key} = {value}")
-            exit(0)
+            sys.exit(0)
 
-    RefreshStatus()
-    MainLoop()
+    WSBMC_RefreshStatus()
+    WSBMC_MainLoop()
 except:
     pass
 
-ScreenFini()
+WSBMC_ScreenFini()
