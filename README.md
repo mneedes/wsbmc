@@ -5,14 +5,14 @@ This is distributed under the Modified "shit-ware" license (see LICENSE.md).
 
 ## What? Why? How?
 
-I wanted to have basic controls for my BluOS device(s) from a small Linux window. This implementation is written in python and uses a dirt-simple curses interface. It makes use of BluOS' remote integration API and requires a keyboard (shocking I know). It seems to work pretty well for what it is...
+I want to control my BluOS device(s) from a small Linux terminal window. This implementation is written in python and uses a dirt-simple curses interface. It makes use of BluOS' remote integration API and requires use of your keyboard (shocking I know).
 
 Feature Summary:
 
 - Simple commands (skip, back, volume up/down, mute, pause)
-- Artist/song display
+- Artist/song display (may not work in all applications)
 - Small window UI
-- Auto-discovery (Work In Progress)
+- Auto-discovery (WIP, which stands for Work In Progress)
 
 ## Prerequisitez
 
@@ -21,16 +21,16 @@ Feature Summary:
   ```
   pip3 install requests netifaces
   ```
-- For auto-discovery to work (OPTIONAL*) you will need to allow UDP port 11430 broadcasts through your firewall.
+- For auto-discovery to work (OPTIONAL\*) you will need to allow UDP port 11430 broadcasts through your firewall.
     If auto-discovery isn't working, try the following:
   ```
   sudo ufw allow 11430/udp
   ```
-    - (*) Auto-discovery is optional if you already know the IP address of your BluOS device (and your router is well behaved).
+    - (\*) Auto-discovery is optional if you already know the IP address of your BluOS device (and your router is well behaved).
 
 ## Instructionz
 
-1. Open a terminal and invoke (NOTE: This is WIP and doesn't work exactly yet, so use the other options):
+1. Open a terminal and invoke (NOTE: This is WIP and doesn't work exactly yet, so use the other options for now):
    ```
    python3 ./wsbmc.py  -- DON'T USE ME YET, I DON'T WORK, PICK FROM THE OTHER TWO CHOICES
    ```
@@ -38,9 +38,9 @@ Feature Summary:
    ```
    python3 ./wsbmc.py first
    ```
-5. Or, if you already know the IP address of the BluOS device (IPADDR is your device's IP, *e.g.:* 192.168.1.110):
+5. Or, if you already know the IP address of the BluOS device (IP\_ADDRESS is your device's IP, *e.g.:* 192.168.1.110):
    ```
-   python3 ./wsbmc.py IPADDR
+   python3 ./wsbmc.py IP_ADDR
    ```
 6. The following key-press commands are supported by the controller:
 
@@ -54,8 +54,10 @@ Feature Summary:
  q - quit WSBMC
 ```
 
-## Notez
+## Notez / Known Issues
 
-1. The API used by WSBMC may be found here:
+1. The artist/song display doesn't work with Radio Paradise and possibly other apps.
+    + This is likely a BluOS limitation since Status Requests are returning `<Response [200]>` when I run Radio Paradise.
+2. The API used by WSBMC may be found here:
      https://bluos.io/wp-content/uploads/2023/09/BluOS-Custom-Integration-API-v1.5.pdf
 

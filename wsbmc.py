@@ -2,8 +2,8 @@
 
 """
      World's Saddest BluOS(tm) (compatible) Media Controller (WSBMC)
-        Created out of desperation due to lack of BluOS Linux Support
-            version 0.0.0.0.0.-1
+         Created out of desperation due to lack of BluOS Linux Support
+             version 0.0.0.0.0.-1
 
      usage: python3 ./wsbmc.pl [first|IP_ADDRESS]
 
@@ -23,16 +23,27 @@ import netifaces as fuckfaces
 
 # This file uses "Snake_CamelCase" so get over it
 
-def IP_Device(IP):
-    ''' IP_Device "global variable" '''
-    if IP is not None:
-        IP_Device.IP = IP
-    elif not hasattr(IP_Device, "IP"):
-        IP_Device.IP = None
-    return IP_Device.IP
+def Global_SetAndGet(name, value, change):
+    ''' "Global variable" access: a terrible abuse of the language? Don't use this
+         function directly, rather use the Get and Set methods below.  '''
+    if not hasattr(Global_SetAndGet, "store"):
+        Global_SetAndGet.store = {}
+    if change:
+        Global_SetAndGet.store[name] = value
+    return Global_SetAndGet.store.get(name)
+
+def Global_Get(name):
+    ''' Get the "Global variable" '''
+    return Global_SetAndGet(name, None, False)
+
+def Global_Set(name, value):
+    ''' Set the "Global variable" '''
+    Global_SetAndGet(name, value, True)
 
 def LDSP_Add(packet, address):
     ''' Process announce messages from BluOS devices '''
+    # TODO: This should use the IP(s) in the response payload, not the UDP response address.
+    #  But for now we use the UDP address because it works in 99% of shituations.
     try:
         if packet[0:6] == b'\x06LSDP\x01' and packet[7] == 65:
             # Remove packet header
@@ -42,10 +53,11 @@ def LDSP_Add(packet, address):
             count      = message[hdrLength - 1]
             # remove announce message header
             message = message[(hdrLength - 1):]
-            # TODO: more shit
+            # TODO: actually read the payload
             for r in range(count):
                 pass
-            IP_Address, port = address
+            IP_Address, _ = address
+            Global_Get("Devices")[IP_Address] = "Fun"
             return IP_Address
     except:
         pass
@@ -122,7 +134,7 @@ def LDSP_Discovery(useFirst):
 def SendGetRequest(request):
     ''' Send a REST Get request '''
     if not hasattr(SendGetRequest, "baseURL"):
-        SendGetRequest.baseURL = "http://" + IP_Device(None) + ":11000/"
+        SendGetRequest.baseURL = "http://" + Global_Get("IP_Device") + ":11000/"
     return requests.get(SendGetRequest.baseURL + request, timeout=10)
 
 def VolumeUp(dB):
@@ -136,7 +148,7 @@ def VolumeDown(dB):
 def RefreshStatus():
     ''' What the name says '''
     if not hasattr(RefreshStatus, "line"):
-        RefreshStatus.line = "<Nothing playing>"
+        RefreshStatus.line = "<No track information>"
     status = SendGetRequest("Status")
     try:
         root   = vomit.fromstring(status.text)
@@ -144,7 +156,12 @@ def RefreshStatus():
         song   = root.find("name").text
         RefreshStatus.line = artist + " : " + song
     except:
-        pass
+        RefreshStatus.line = "<No track information>"
+        if Global_Get("Debug"):
+            # Debug
+            ScreenFini()
+            print(status)
+            raise Exception("could not parse status")
     stdscr.clear()
     stdscr.addstr(0, 0, RefreshStatus.line)
     stdscr.refresh()
@@ -191,7 +208,7 @@ def ScreenFini():
     curses.echo()
     curses.endwin()
 
-def Loop():
+def MainLoop():
     ''' What the name says '''
     while 1:
         try:
@@ -204,18 +221,25 @@ def Loop():
             # Update status if no key pressed during the "halfassdelay"
             RefreshStatus()
 
+Global_Set("Debug", False)
+Global_Set("Devices", {})
+
 if len(sys.argv) > 1:
     if sys.argv[1] == 'first':
-        IP_Device(LDSP_Discovery(True))
+        Global_Set("IP_Device", LDSP_Discovery(True))
     else:
-        IP_Device(sys.argv[1])
+        Global_Set("IP_Device", sys.argv[1])
 else:
-    IP_Device(LDSP_Discovery(False))
+    Global_Set("IP_Device", LDSP_Discovery(False))
+    if Global_Get("Debug"):
+        for key, value in Global_Get("Devices").items():
+            print(f"{key} = {value}")
+        exit(0)
 
 try:
     stdscr = ScreenInit()
     RefreshStatus()
-    Loop()
+    MainLoop()
 except:
     pass
 
