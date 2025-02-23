@@ -24,8 +24,8 @@ import netifaces as fuckfaces
 # This file uses "Snake_CamelCase" so get over it
 
 def Global_SetAndGet(name, value, change):
-    ''' "Global variable" access: a terrible abuse of the language? Don't use this
-         function directly, rather use the Get and Set methods below.  '''
+    ''' "Global variable" access: a terrible abuse of the language? You decide!
+         Don't use this function directly, rather use the Get and Set methods below.  '''
     if not hasattr(Global_SetAndGet, "store"):
         Global_SetAndGet.store = {}
     if change:
@@ -40,33 +40,54 @@ def Global_Set(name, value):
     ''' Set the "Global variable" '''
     Global_SetAndGet(name, value, True)
 
-def LDSP_Add(packet, address):
+# TODO: This parse is a bit messy, clean up
+def LDSP_Parse(packet, address):
     ''' Process announce messages from BluOS devices '''
-    # TODO: This should use the IP(s) in the response payload, not the UDP response address.
-    #  But for now we use the UDP address because it works in 99% of shituations.
     try:
+        # Check and parse packet (variable length payloads are a bit annoying but OK)
         if packet[0:6] == b'\x06LSDP\x01' and packet[7] == 65:
             # Remove packet header
-            message    = packet[6:packet[6]]
-            hdrLength  = 3 + message[2]
-            hdrLength += message[hdrLength] + 2
-            count      = message[hdrLength - 1]
-            # remove announce message header
-            message = message[(hdrLength - 1):]
-            # TODO: actually read the payload
-            for r in range(count):
-                pass
-            IP_Address, _ = address
-            Global_Get("Devices")[IP_Address] = "Fun"
+            message = packet[6:packet[6] + 6]  # 666, always a party favorite
+            # Parse announce header and extract IP address
+            hdrLen = 3 + message[2]
+            ipLen  = message[hdrLen]
+            if ipLen != 4:
+                raise Exception("Can't do IPv6 addresses or something else is seriously wrong")
+            hdrLen += 1
+            ip = message[hdrLen:hdrLen + ipLen]
+            IP_Address = f"{ip[0]}.{ip[1]}.{ip[2]}.{ip[3]}"
+            # Get announce record count and remove announce header
+            hdrLen  += ipLen + 1
+            recCount = message[hdrLen - 1]
+            message  = message[hdrLen:]
+            # collect name-value pairs
+            nvp = {}
+            for r in range(recCount):
+                classID = 256*message[0] + message[1]
+                keyCount = message[2]
+                message  = message[3:]
+                for k in range(keyCount):
+                    keyLen = message[0]
+                    key    = str(message[1:keyLen + 1])
+                    valLen = message[keyLen + 1]
+                    val    = str(message[keyLen + 2:keyLen + valLen + 2])
+                    # Filter out the manufacturing classID 4 that I didn't ask for (seems like a dumb bug)
+                    if classID == 1:
+                        nvp[key] = val
+                    message = message[keyLen + valLen + 2:]
+            Global_Get("Devices")[IP_Address] = nvp
             return IP_Address
     except:
-        pass
+        if Global_Get("Debug"):
+            # Debug
+            ScreenFini()
+            raise Exception("could not parse announce message")
     return None
 
 def LDSP_Query(sock, IP_Broadcast, useFirst):
     ''' Send LDSP query packet and await response(s) '''
     if not hasattr(LDSP_Query, "txPacket"):
-        # Construct the query packet
+        # Construct the query packet (only queries class ID 1, but gets 4 too as a silly bonus)
         header  = struct.pack("!6s", b'\x06LSDP\x01')
         message = struct.pack("!5s", b'\x05\x51\x01\x00\x01')
         LDSP_Query.txPacket = header + message
@@ -76,8 +97,8 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
     while 1:
         try:
             sock.settimeout(timeout)
-            rxPacket, address = sock.recvfrom(1024)
-            IP_Address = LDSP_Add(rxPacket, address)
+            rxPacket, address = sock.recvfrom(4096)
+            IP_Address = LDSP_Parse(rxPacket, address)
             if IP_Address is not None and useFirst:
                 return IP_Address
         except socket.timeout:
@@ -221,23 +242,24 @@ def MainLoop():
             # Update status if no key pressed during the "halfassdelay"
             RefreshStatus()
 
-Global_Set("Debug", False)
+Global_Set("Debug", True)
 Global_Set("Devices", {})
-
-if len(sys.argv) > 1:
-    if sys.argv[1] == 'first':
-        Global_Set("IP_Device", LDSP_Discovery(True))
-    else:
-        Global_Set("IP_Device", sys.argv[1])
-else:
-    Global_Set("IP_Device", LDSP_Discovery(False))
-    if Global_Get("Debug"):
-        for key, value in Global_Get("Devices").items():
-            print(f"{key} = {value}")
-        exit(0)
 
 try:
     stdscr = ScreenInit()
+
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'first':
+            Global_Set("IP_Device", LDSP_Discovery(True))
+        else:
+            Global_Set("IP_Device", sys.argv[1])
+    else:
+        Global_Set("IP_Device", LDSP_Discovery(False))
+        if Global_Get("Debug"):
+            for key, value in Global_Get("Devices").items():
+                print(f"{key} = {value}")
+            exit(0)
+
     RefreshStatus()
     MainLoop()
 except:
