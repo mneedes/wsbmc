@@ -44,7 +44,6 @@ def Global_Set(name, value):
 
 class LDSP_GotFirst(Exception):
     ''' For grabbing the first BluOS IP address and running with it '''
-    pass
 
 def LDSP_Parse(packet, useFirst):
     ''' Process announce messages from BluOS devices '''
@@ -100,11 +99,10 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
     sock.sendto(LDSP_Query.txPacket, (IP_Broadcast, 11430))
     timeout  = 0.750
     doneTime = time.time() + timeout
-    IP_Address = None
     while 1:
         try:
             sock.settimeout(timeout)
-            rxPacket, _ = sock.recvfrom(4096)
+            rxPacket, _ = sock.recvfrom(1024)
             LDSP_Parse(rxPacket, useFirst)
         except socket.timeout:
             pass
@@ -153,9 +151,8 @@ def LDSP_Discovery(useFirst):
         LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
     except LDSP_GotFirst as IP:
         IP_Address = str(IP)
-    finally:
-        sock.close()
-        return IP_Address
+    sock.close()
+    return IP_Address
 
 def REST_SendGetRequest(request):
     ''' What the name says '''
@@ -181,13 +178,13 @@ def WSBMC_RefreshStatus():
         artist = root.find("artist").text
         song   = root.find("name").text
         WSBMC_RefreshStatus.line = artist + " : " + song
-    except:
+    except Exception as e:
         WSBMC_RefreshStatus.line = "<No track information>"
         if Global_Get("Debug"):
             # Debug
             WSBMC_ScreenFini()
             print(status)
-            raise Exception("could not parse status")
+            raise Exception("could not parse status") from e
     stdscr.clear()
     stdscr.addstr(0, 0, WSBMC_RefreshStatus.line)
     stdscr.refresh()
@@ -217,7 +214,7 @@ def WSBMC_RunKeyCommand(key):
 
 def WSBMC_ScreenInit():
     ''' What the name says '''
-    stdscr = curses.initscr()
+    scr = curses.initscr()
     curses.noecho()
     curses.cbreak()
     # Wait up to 20 deciseconds for a keypress (that's 2 seconds for you humans)
@@ -225,7 +222,7 @@ def WSBMC_ScreenInit():
     #   especially as the input is in 10ths, maybe tenthsdelay() would be
     #   better?  In any event, this API name is, well, ... total shit.
     curses.halfdelay(20)
-    return stdscr
+    return scr
 
 def WSBMC_ScreenFini():
     ''' What the name says '''
