@@ -82,10 +82,10 @@ def LDSP_Parse(packet, useFirst):
                         nvp[key] = val
                     message = message[keyLen + valLen + 2:]
             Global_Get("Devices")[IP_Address] = nvp
-    except:
-        raise Exception("Could not parse announce message")
+    except Exception as e:
+        raise Exception("Could not parse announce message") from e
     finally:
-        if IP_Address != None and useFirst:
+        if IP_Address is not None and useFirst:
             raise LDSP_GotFirst(IP_Address)
 
 def LDSP_Query(sock, IP_Broadcast, useFirst):
