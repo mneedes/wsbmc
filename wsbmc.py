@@ -21,7 +21,7 @@ import requests
 # "iface", is that something new from Apple? Why not netinterfaces or netif?
 import netifaces as fuckfaces
 
-# This file uses "Snake_CamelCase" so get over it
+# This file uses "Sn_AmelCase" so get over it
 
 def Global_SetAndGet(name, value, change):
     ''' "Global Variable" access: a terrible abuse of the language? You decide!
@@ -35,16 +35,21 @@ def Global_SetAndGet(name, value, change):
 
 def Global_Get(name):
     ''' Get the "Global Variable," but sometimes you have to use Get to "Set"
-        because it can mean "Get By Reference" too! '''
+        because it can also mean "Get By Reference" ! '''
     return Global_SetAndGet(name, None, False)
 
 def Global_Set(name, value):
     ''' Set the "Global Variable" '''
     Global_SetAndGet(name, value, True)
 
-def LDSP_Parse(packet):
+class LDSP_GotFirst(Exception):
+    ''' For grabbing the first BluOS IP address and running with it '''
+    pass
+
+def LDSP_Parse(packet, useFirst):
     ''' Process announce messages from BluOS devices '''
     try:
+        IP_Address = None
         # Check and parse packet (variable length payloads are a bit annoying but OK)
         if packet[0:6] == b'\x06LSDP\x01' and packet[7] == 65:
             # Remove packet header
@@ -78,13 +83,11 @@ def LDSP_Parse(packet):
                         nvp[key] = val
                     message = message[keyLen + valLen + 2:]
             Global_Get("Devices")[IP_Address] = nvp
-            return IP_Address
     except:
-        if Global_Get("Debug"):
-            # Debug
-            WSBMC_ScreenFini()
-            raise Exception("could not parse announce message")
-    return None
+        raise Exception("Could not parse announce message")
+    finally:
+        if IP_Address != None and useFirst:
+            raise LDSP_GotFirst(IP_Address)
 
 def LDSP_Query(sock, IP_Broadcast, useFirst):
     ''' Send LDSP query packet and await response(s) '''
@@ -97,13 +100,12 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
     sock.sendto(LDSP_Query.txPacket, (IP_Broadcast, 11430))
     timeout  = 0.750
     doneTime = time.time() + timeout
+    IP_Address = None
     while 1:
         try:
             sock.settimeout(timeout)
             rxPacket, _ = sock.recvfrom(4096)
-            IP_Address = LDSP_Parse(rxPacket)
-            if IP_Address is not None and useFirst:
-                return IP_Address
+            LDSP_Parse(rxPacket, useFirst)
         except socket.timeout:
             pass
         except socket.error as e:
@@ -112,7 +114,6 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
         timeout = doneTime - time.time()
         if timeout < 0:
             break
-    return None
 
 def IP_GetBroadcastAddress():
     ''' What the name says '''
@@ -137,23 +138,24 @@ def LDSP_Discovery(useFirst):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.bind((LDSP_Discovery.IP_Broadcast, 11430))
-    # Fire off the seven (Sieben, (Siete (6+1))) query packets
-    #   and obtain response(s)
-    fireTimes = [ 1, 2, 3, 5, 7, 10 ]
-    startTime = time.time()
-    for p in range(6):
-        IP_Address = LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
-        if IP_Address is not None and useFirst:
-            return IP_Address
-        waitTime  = fireTimes[p] - (time.time() - startTime)
-        waitTime += 0.001 * random.randint(0, 250)
-        if waitTime > 0:
-            time.sleep(waitTime)
-    IP_Address = LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
-    sock.close()
-    if IP_Address is not None and useFirst:
+    try:
+        IP_Address = None
+        # Fire off the seven (Sieben, (Siete (6+1))) query packets
+        #   and obtain response(s)
+        fireTimes = [ 1, 2, 3, 5, 7, 10 ]
+        startTime = time.time()
+        for p in range(6):
+            LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
+            waitTime  = fireTimes[p] - (time.time() - startTime)
+            waitTime += 0.001 * random.randint(0, 250)
+            if waitTime > 0:
+                time.sleep(waitTime)
+        LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
+    except LDSP_GotFirst as IP:
+        IP_Address = str(IP)
+    finally:
+        sock.close()
         return IP_Address
-    return None
 
 def REST_SendGetRequest(request):
     ''' What the name says '''
@@ -245,12 +247,12 @@ def WSBMC_MainLoop():
             # Update status if no key pressed during the "halfassdelay"
             WSBMC_RefreshStatus()
 
-Global_Set("Debug", False)
+Global_Set("Debug", True)
 Global_Set("Devices", {})
 
-try:
-    stdscr = WSBMC_ScreenInit()
+stdscr = WSBMC_ScreenInit()
 
+try:
     if len(sys.argv) > 1:
         if sys.argv[1] == 'first':
             Global_Set("IP_Device", LDSP_Discovery(True))
@@ -262,6 +264,8 @@ try:
             for key, value in Global_Get("Devices").items():
                 print(f"{key} = {value}")
             sys.exit(0)
+
+    #print(curses.LINES)
 
     WSBMC_RefreshStatus()
     WSBMC_MainLoop()
