@@ -73,9 +73,9 @@ def LDSP_Parse(packet, useFirst):
                 message  = message[3:]
                 for _ in range(keyCount):
                     keyLen = message[0]
-                    key    = str(message[1:keyLen + 1])
+                    key    = str(message[1:keyLen + 1], "utf-8")
                     valLen = message[keyLen + 1]
-                    val    = str(message[keyLen + 2:keyLen + valLen + 2])
+                    val    = str(message[keyLen + 2:keyLen + valLen + 2], "utf-8")
                     # Filter out the manufacturing classID 4 that I didn't ask for
                     #   (seems like a dumb bug)
                     if classID == 1:
@@ -247,6 +247,36 @@ def WSBMC_MainLoop():
 Global_Set("Debug", True)
 Global_Set("Devices", {})
 
+def WSBMC_PickPlayer():
+    ''' Pick the player from a list '''
+    stdscr.clear()
+    deviceMax = curses.LINES - 1
+    line = 0
+    items = Global_Get("Devices").items()
+    for key, value in items:
+        stdscr.addstr(line, 0, f"{line}. Device Name = '{value['name']}'    IP ADDRESS = {key}")
+        line = line + 1
+        if line == deviceMax:
+            break
+    if line == 0:
+        stdscr.clear()
+        stdscr.addstr(0, 0, f"Can't find any players, aborting...")
+        stdscr.refresh()
+        time.sleep(1.0)
+        return None
+    elif line == 1:
+        # Grab "first" element in dictionary
+        for key, value in items:
+            stdscr.clear()
+            stdscr.addstr(0, 0, f"Only one device found, using IP ADDRESS = {key}")
+            stdscr.refresh()
+            time.sleep(1.0)
+            return key
+    else:
+        # TODO: this kinda sucks
+        stdscr.addstr(line, 0, f"Pick which One: ")
+        return None
+
 stdscr = WSBMC_ScreenInit()
 
 try:
@@ -256,13 +286,10 @@ try:
         else:
             Global_Set("IP_Device", sys.argv[1])
     else:
-        Global_Set("IP_Device", LDSP_Discovery(False))
-        if Global_Get("Debug"):
-            for key, value in Global_Get("Devices").items():
-                print(f"{key} = {value}")
-            sys.exit(0)
-
-    #print(curses.LINES)
+        stdscr.addstr(0, 0, "Scanning network for BluOS devices...")
+        stdscr.refresh()
+        LDSP_Discovery(False)
+        Global_Set("IP_Device", WSBMC_PickPlayer())
 
     WSBMC_RefreshStatus()
     WSBMC_MainLoop()
