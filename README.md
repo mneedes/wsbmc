@@ -45,6 +45,7 @@ Feature Summary:
 6. The following key-press commands are supported by the controller:
 
 ```
+ h - display help
  u - volume up (and unmute)
  d - volume down
  m - mute

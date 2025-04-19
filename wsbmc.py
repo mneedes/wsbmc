@@ -199,8 +199,8 @@ def WSBMC_RunKeyCommand(key):
             WSBMC_VolumeUp("2")
         case 'd':
             WSBMC_VolumeDown("2")
-        case 'r':
-            quickRefresh = True
+        case 'm':
+            REST_SendGetRequest("Volume?mute=1")
         case 'p':
             REST_SendGetRequest("Pause?toggle=1")
         case 's':
@@ -209,8 +209,20 @@ def WSBMC_RunKeyCommand(key):
         case 'b':
             REST_SendGetRequest("Back")
             quickRefresh = True
-        case 'm':
-            REST_SendGetRequest("Volume?mute=1")
+        case 'h':
+            stdscr.clear()
+            if curses.LINES < 5:
+                stdscr.addstr(0, 0, f"Screen too small")
+            else:
+                stdscr.addstr(0, 0, f"WSMBC Help")
+                stdscr.addstr(1, 2, f"u - volume up  d - volume down")
+                stdscr.addstr(2, 2, f"m - mute       p - pause/resume")
+                stdscr.addstr(3, 2, f"s - skip       b - back")
+                stdscr.addstr(4, 2, f"h - help       q - quit")
+            stdscr.refresh()
+            time.sleep(3)
+            curses.flushinp()
+            quickRefresh = True
     return quickRefresh
 
 def WSBMC_ScreenSetKeypressTimeout():
@@ -253,45 +265,42 @@ Global_Set("Devices", {})
 
 def WSBMC_PickPlayer():
     ''' Pick the player from a list '''
-    deviceMax = curses.LINES - 1
-    if deviceMax > 9:
-        deviceMax = 9
-    line = 0
     devices_dict = Global_Get("Devices")
     # Convert device dictionary to array
     devices = []
     for key, value in devices_dict.items():
         devices.append(value)
+    # Limit number of devices to number of lines or 10 whichever is smaller
+    numDevices = len(devices)
+    if numDevices > curses.LINES - 1:
+        numDevices = curses.LINES - 1
+    if numDevices > 10:
+        numDevices = 10
     while 1:
+        line = 0
         stdscr.clear()
-        for line in range(len(devices)):
-            device = devices[line]
-            stdscr.addstr(line, 0, f"{line}. Device Name = '{device['name']}'   IP ADDRESS = {device['ip']}")
-            line = line + 1
-            if line == deviceMax:
-                break
-        if line == 0:
-            stdscr.clear()
+        if numDevices == 0:
             stdscr.addstr(0, 0, f"Can't find any players, aborting...")
             stdscr.refresh()
             time.sleep(1.5)
             return None
-        elif line == 1:
-            # Grab "first" element in dictionary
+        elif numDevices == 1:
             device = devices[0]
-            stdscr.clear()
             stdscr.addstr(0, 0, f"Only one device found, using IP ADDRESS = {device['ip']}")
             stdscr.refresh()
             time.sleep(1.5)
             return device['ip']
         else:
-            stdscr.addstr(line, 0, f"Pick which One (q to quit): ")
+            for line in range(numDevices):
+                device = devices[line]
+                stdscr.addstr(line, 0, f"{line}. Device Name = '{device['name']}'   IP ADDRESS = {device['ip']}")
+            stdscr.addstr(numDevices, 0, f"Choose device number (or q to quit): ")
             stdscr.refresh()
             key = stdscr.getkey()
             if key == 'q':
                 return None
             line = ord(key) - ord('0')
-            if line >= 0 and line < len(devices):
+            if line >= 0 and line < numDevices:
                 device = devices[line]
                 return device['ip']
 
