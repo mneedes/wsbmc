@@ -10,9 +10,9 @@ I want to control my BluOS device(s) from a small Linux terminal window. This im
 Feature Summary:
 
 - Simple commands (skip, back, volume up/down, mute, pause)
-- Artist/song display (may not work in all applications)
+- Artist/song display (may not work in all applications, not my fault)
 - Small window UI
-- Auto-discovery (WIP, which stands for Work In Progress)
+- Auto-discovery
 
 ## Prerequisitez
 
@@ -30,9 +30,9 @@ Feature Summary:
 
 ## Instructionz
 
-1. Open a terminal and invoke (NOTE: This is WIP and doesn't work exactly yet, so use the other options for now):
+1. Open a terminal and invoke (this does a "deep" scan):
    ```
-   python3 ./wsbmc.py  -- DON'T USE ME YET, I DON'T WORK, PICK FROM THE OTHER TWO CHOICES
+   python3 ./wsbmc.py
    ```
 3. Or, if you only have one BluOS device, invoke the following and it will connect to the first BluOS device it finds! Also great if you have *more* than one BluOS device and you like to gamble.
    ```

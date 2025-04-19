@@ -81,7 +81,8 @@ def LDSP_Parse(packet, useFirst):
                     if classID == 1:
                         nvp[key] = val
                     message = message[keyLen + valLen + 2:]
-            Global_Get("Devices")[IP_Address] = nvp
+            nvp['ip'] = IP_Address
+            Global_Get("Devices")[key] = nvp
     except Exception as e:
         raise Exception("Could not parse announce message") from e
     finally:
@@ -212,16 +213,19 @@ def WSBMC_RunKeyCommand(key):
             REST_SendGetRequest("Volume?mute=1")
     return quickRefresh
 
-def WSBMC_ScreenInit():
+def WSBMC_ScreenSetKeypressTimeout():
     ''' What the name says '''
-    scr = curses.initscr()
-    curses.noecho()
-    curses.cbreak()
     # Wait up to 20 deciseconds for a keypress (that's 2 seconds for you humans)
     #   halfdelay() is another "great" name. How about halfassdelay() ?
     #   especially as the input is in 10ths, maybe tenthsdelay() would be
     #   better?  In any event, this API name is, well, ... total shit.
     curses.halfdelay(20)
+
+def WSBMC_ScreenInit():
+    ''' What the name says '''
+    scr = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
     return scr
 
 def WSBMC_ScreenFini():
@@ -249,33 +253,47 @@ Global_Set("Devices", {})
 
 def WSBMC_PickPlayer():
     ''' Pick the player from a list '''
-    stdscr.clear()
     deviceMax = curses.LINES - 1
+    if deviceMax > 9:
+        deviceMax = 9
     line = 0
-    items = Global_Get("Devices").items()
-    for key, value in items:
-        stdscr.addstr(line, 0, f"{line}. Device Name = '{value['name']}'    IP ADDRESS = {key}")
-        line = line + 1
-        if line == deviceMax:
-            break
-    if line == 0:
+    devices_dict = Global_Get("Devices")
+    # Convert device dictionary to array
+    devices = []
+    for key, value in devices_dict.items():
+        devices.append(value)
+    while 1:
         stdscr.clear()
-        stdscr.addstr(0, 0, f"Can't find any players, aborting...")
-        stdscr.refresh()
-        time.sleep(1.0)
-        return None
-    elif line == 1:
-        # Grab "first" element in dictionary
-        for key, value in items:
+        for line in range(len(devices)):
+            device = devices[line]
+            stdscr.addstr(line, 0, f"{line}. Device Name = '{device['name']}'   IP ADDRESS = {device['ip']}")
+            line = line + 1
+            if line == deviceMax:
+                break
+        if line == 0:
             stdscr.clear()
-            stdscr.addstr(0, 0, f"Only one device found, using IP ADDRESS = {key}")
+            stdscr.addstr(0, 0, f"Can't find any players, aborting...")
             stdscr.refresh()
-            time.sleep(1.0)
-            return key
-    else:
-        # TODO: this kinda sucks
-        stdscr.addstr(line, 0, f"Pick which One: ")
-        return None
+            time.sleep(1.5)
+            return None
+        elif line == 1:
+            # Grab "first" element in dictionary
+            device = devices[0]
+            stdscr.clear()
+            stdscr.addstr(0, 0, f"Only one device found, using IP ADDRESS = {device['ip']}")
+            stdscr.refresh()
+            time.sleep(1.5)
+            return device['ip']
+        else:
+            stdscr.addstr(line, 0, f"Pick which One (q to quit): ")
+            stdscr.refresh()
+            key = stdscr.getkey()
+            if key == 'q':
+                return None
+            line = ord(key) - ord('0')
+            if line >= 0 and line < len(devices):
+                device = devices[line]
+                return device['ip']
 
 stdscr = WSBMC_ScreenInit()
 
@@ -292,6 +310,7 @@ try:
         Global_Set("IP_Device", WSBMC_PickPlayer())
 
     WSBMC_RefreshStatus()
+    WSBMC_ScreenSetKeypressTimeout()
     WSBMC_MainLoop()
 except:
     pass
