@@ -249,8 +249,10 @@ def WSBMC_ScreenFini():
 
 def WSBMC_MainLoop():
     ''' What the name says '''
+    WSBMC_ScreenSetKeypressTimeout()
     while 1:
         try:
+            # Get key (with timeout)
             key = stdscr.getkey()
             if WSBMC_RunKeyCommand(key):
                 WSBMC_RefreshStatus()
@@ -280,9 +282,6 @@ def WSBMC_PickPlayer():
         line = 0
         stdscr.clear()
         if numDevices == 0:
-            stdscr.addstr(0, 0, f"Can't find any players, aborting...")
-            stdscr.refresh()
-            time.sleep(1.5)
             return None
         elif numDevices == 1:
             device = devices[0]
@@ -318,10 +317,16 @@ try:
         LDSP_Discovery(False)
         Global_Set("IP_Device", WSBMC_PickPlayer())
 
-    WSBMC_RefreshStatus()
-    WSBMC_ScreenSetKeypressTimeout()
-    WSBMC_MainLoop()
+    if Global_Get("IP_Device") == None:
+        stdscr.addstr(0, 0, f"Can't find any players, aborting...")
+        stdscr.refresh()
+        time.sleep(1.5)
+    else:
+        WSBMC_RefreshStatus()
+        WSBMC_MainLoop()
 except:
-    pass
+    stdscr.addstr(0, 0, f"usage: python3 ./wsbmc.pl [first|IP_ADDRESS]")
+    stdscr.refresh()
+    time.sleep(1.5)
 
 WSBMC_ScreenFini()

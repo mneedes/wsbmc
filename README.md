@@ -9,10 +9,10 @@ I want to control my BluOS device(s) from a small Linux terminal window. This im
 
 Feature Summary:
 
+- Small terminal window UI
 - Simple commands (skip, back, volume up/down, mute, pause)
 - Artist/song display (may not work in all applications, not my fault)
-- Small window UI
-- Auto-discovery
+- Auto-discovery (automatically finds BluOS devices on network)
 
 ## Prerequisitez
 
@@ -55,7 +55,7 @@ Feature Summary:
  q - quit WSBMC
 ```
 
-## Notez / Known Issues
+## Notez / Known Issuez
 
 1. The artist/song display doesn't work with Radio Paradise and possibly other apps.
     + This is likely a BluOS limitation since Status Requests are returning `<Response [200]>` when I run Radio Paradise.
