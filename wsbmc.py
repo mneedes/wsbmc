@@ -89,7 +89,7 @@ def LDSP_Parse(packet, useFirst):
         if IP_Address is not None and useFirst:
             raise LDSP_GotFirst(IP_Address)
 
-def LDSP_Query(sock, IP_Broadcast, useFirst):
+def LDSP_Query(sock, IP_Send, useFirst):
     ''' Send LDSP query packet and await response(s) '''
     if not hasattr(LDSP_Query, "txPacket"):
         # Construct the query packet (only queries class ID 1 (players),
@@ -97,7 +97,7 @@ def LDSP_Query(sock, IP_Broadcast, useFirst):
         header  = struct.pack("!6s", b'\x06LSDP\x01')
         message = struct.pack("!5s", b'\x05\x51\x01\x00\x01')
         LDSP_Query.txPacket = header + message
-    sock.sendto(LDSP_Query.txPacket, (IP_Broadcast, 11430))
+    sock.sendto(LDSP_Query.txPacket, (IP_Send, 11430))
     timeout  = 0.750
     doneTime = time.time() + timeout
     while 1:
@@ -132,28 +132,29 @@ def LDSP_Discovery(useFirst):
         LDSP_Discovery.IP_Broadcast = IP_GetBroadcastAddress()
         if LDSP_Discovery.IP_Broadcast is None:
             raise Exception("Can't get broadcast address")
+    IP_Send = LDSP_Discovery.IP_Broadcast
     # Set up a UDP broadcast socket
-    sock  = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.bind((LDSP_Discovery.IP_Broadcast, 11430))
+    sock.bind((IP_Send, 11430))
     try:
-        IP_Address = None
+        IP_Received = None
         # Fire off the seven (Sieben, (Siete (6+1))) query packets
         #   and obtain response(s)
         fireTimes = [ 1, 2, 3, 5, 7, 10 ]
         startTime = time.time()
         for p in range(6):
-            LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
+            LDSP_Query(sock, IP_Send, useFirst)
             waitTime  = fireTimes[p] - (time.time() - startTime)
             waitTime += 0.001 * random.randint(0, 250)
             if waitTime > 0:
                 time.sleep(waitTime)
-        LDSP_Query(sock, LDSP_Discovery.IP_Broadcast, useFirst)
+        LDSP_Query(sock, IP_Send, useFirst)
     except LDSP_GotFirst as IP:
-        IP_Address = str(IP)
+        IP_Received = str(IP)
     sock.close()
-    return IP_Address
+    return IP_Received
 
 def REST_SendGetRequest(request):
     ''' What the name says '''
@@ -181,11 +182,6 @@ def WSBMC_RefreshStatus():
         WSBMC_RefreshStatus.line = artist + " : " + song
     except Exception as e:
         WSBMC_RefreshStatus.line = "<No track information>"
-        if Global_Get("Debug"):
-            # Debug
-            WSBMC_ScreenFini()
-            print(status)
-            raise Exception("could not parse status") from e
     stdscr.clear()
     stdscr.addstr(0, 0, WSBMC_RefreshStatus.line)
     stdscr.refresh()
@@ -262,8 +258,13 @@ def WSBMC_MainLoop():
             # Update status if no key pressed during the "halfassdelay"
             WSBMC_RefreshStatus()
 
-Global_Set("Debug", True)
 Global_Set("Devices", {})
+
+def WSBMC_FlashMessage(message):
+    stdscr.clear()
+    stdscr.addstr(0, 0, message)
+    stdscr.refresh()
+    time.sleep(1.5)
 
 def WSBMC_PickPlayer():
     ''' Pick the player from a list '''
@@ -285,9 +286,7 @@ def WSBMC_PickPlayer():
             return None
         elif numDevices == 1:
             device = devices[0]
-            stdscr.addstr(0, 0, f"Only one device found, using IP ADDRESS = {device['ip']}")
-            stdscr.refresh()
-            time.sleep(1.5)
+            WSBMC_FlashMessage(f"Only one device found, using IP ADDRESS = {device['ip']}")
             return device['ip']
         else:
             for line in range(numDevices):
@@ -318,15 +317,15 @@ try:
         Global_Set("IP_Device", WSBMC_PickPlayer())
 
     if Global_Get("IP_Device") == None:
-        stdscr.addstr(0, 0, f"Can't find any players, aborting...")
-        stdscr.refresh()
-        time.sleep(1.5)
+        WSBMC_FlashMessage("Can't find any players, aborting...")
     else:
-        WSBMC_RefreshStatus()
-        WSBMC_MainLoop()
+        try:
+            WSBMC_RefreshStatus()
+            WSBMC_MainLoop()
+        except:
+            WSBMC_FlashMessage("Can't connect to player, aborting...")
 except:
-    stdscr.addstr(0, 0, f"usage: python3 ./wsbmc.pl [first|IP_ADDRESS]")
-    stdscr.refresh()
-    time.sleep(1.5)
+    pass
 
 WSBMC_ScreenFini()
+
