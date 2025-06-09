@@ -249,7 +249,7 @@ def WSBMC_MainLoop():
     while 1:
         try:
             # Get key (with timeout)
-            key = stdscr.getkey()
+            key = stdscr.getkey().lower()
             if WSBMC_RunKeyCommand(key):
                 WSBMC_RefreshStatus()
             if key == 'q':
@@ -294,7 +294,7 @@ def WSBMC_PickPlayer():
                 stdscr.addstr(line, 0, f"{line}. Device Name = '{device['name']}'   IP ADDRESS = {device['ip']}")
             stdscr.addstr(numDevices, 0, f"Choose device number (or q to quit): ")
             stdscr.refresh()
-            key = stdscr.getkey()
+            key = stdscr.getkey().lower()
             if key == 'q':
                 return None
             line = ord(key) - ord('0')
