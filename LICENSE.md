@@ -27,6 +27,11 @@ SOFTWARE.
 To the above inane legal screed we add the following extra stipulations
 regarding this "piece of work," (i.e.: the "Software"):
 
+The Softare or any part thereof may NOT be used for the purpose of developing,
+training, or tuning any generative AI models, machine learning models, or
+artificial intelligence algorithms, whether for commercial or non-commercial
+purposes.
+
 THE AUTHOR OF THIS SOFTWARE SHALL NOT BE LIABLE FOR ANY DAMAGES RESULTING FROM
 SMOKE, FLAMES, EXPLOSIONS OR ANY ACTS OF GOD (IMAGINED OR OTHERWISE) ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE (BUT DON'T WORRY, THIS PROBABLY
